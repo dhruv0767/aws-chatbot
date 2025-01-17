@@ -9,7 +9,7 @@ import numpy as np
 from langchain_community.embeddings import BedrockEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_community.document_loaders import PyPDFDirectoryLoader
-from langchain_community.llms.bedrock import Bedrock
+from langchain_aws import BedrockLLM
 
 # LangChain Core Imports
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -23,17 +23,14 @@ bedrock_embeddings = BedrockEmbeddings(
     client=bedrock
 )
 
-def data_ingestion():
+def create_vector_store():
     loader = PyPDFDirectoryLoader("Data")
     documents = loader.load()
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=10000,
-        chunk_overlap=1000
+        chunk_size=256,
+        chunk_overlap=200
     )
     docs = text_splitter.split_documents(documents)
-    return docs
-
-def get_vector_store(docs):
     vectorstore_faiss = FAISS.from_documents(
         docs,
         bedrock_embeddings
@@ -42,6 +39,8 @@ def get_vector_store(docs):
     return vectorstore_faiss
 
 def load_vector_store():
+    if not os.path.exists("faiss_index"):
+        return create_vector_store()
     return FAISS.load_local(
         "faiss_index", 
         bedrock_embeddings, 
@@ -49,7 +48,7 @@ def load_vector_store():
     )
 
 def get_llm():
-    return Bedrock(
+    return BedrockLLM(
         model_id="anthropic.claude-instant-v1",
         client=bedrock,
         model_kwargs={'max_tokens_to_sample': 512}
@@ -84,27 +83,18 @@ def get_response_llm(llm, vectorstore_faiss, query):
         return_source_documents=True,
         chain_type_kwargs={"prompt": PROMPT}
     )
-    answer = qa({"query": query})
+    answer = qa.invoke({"query": query})
     return answer['result']
 
 def main():
     st.set_page_config("Chat PDF")
-    st.header("Chat with PDF using AWS Bedrock💁")
+    st.header("Welcome to Dhruv's Personal Chatbot!")
     
-    user_question = st.text_input("Ask a Question from the PDF Files")
+    # Add key parameter to track the input state
+    user_question = st.text_input("Ask a Question which you would like to know about Dhruv!", key="question_input", on_change=None)
 
-    with st.sidebar:
-        st.title("Update Or Create Vector Store:")
-        if st.button("Vectors Update"):
-            with st.spinner("Processing..."):
-                try:
-                    docs = data_ingestion()
-                    get_vector_store(docs)
-                    st.success("Vector store updated successfully!")
-                except Exception as e:
-                    st.error(f"Error updating vector store: {str(e)}")
-
-    if st.button("Output"):
+    # Check for either button click or Enter key press (when input changes)
+    if st.button("Output") or user_question:
         if not user_question:
             st.warning("Please enter a question first.")
             return

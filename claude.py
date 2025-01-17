@@ -2,7 +2,9 @@ import boto3
 import json
 
 prompt_data="""
-Act as a Shakespeare and write a poem on Genertaive AI
+You are a highly intelligent and professional chatbot designed to answer questions about Dhruv Shah, his projects, career, and expertise. 
+Use the given context to deliver detailed, concise, and professional answers. Always conclude by suggesting three additional related questions 
+to engage the user further. The questions should be in bulleted points. If the information is unavailable, say "I don't know" without speculating.
 """
 
 bedrock=boto3.client(service_name="bedrock-runtime")
