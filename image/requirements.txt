@@ -4,3 +4,5 @@ pypdf
 langchain
 streamlit
 faiss-cpu
+Docker
+
